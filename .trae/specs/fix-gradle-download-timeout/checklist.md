@@ -1,0 +1,4 @@
+- [x] gradle-wrapper.properties 的 distributionUrl 已改为腾讯云镜像地址
+- [x] settings.gradle 中 pluginManagement.repositories 已启用国内镜像
+- [x] settings.gradle 中 dependencyResolutionManagement.repositories 已启用国内镜像
+- [x] 执行 `./gradlew --version` 可验证 Gradle 分发包能正常下载
