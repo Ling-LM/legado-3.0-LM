@@ -52,3 +52,10 @@
 - [ ] 快速连续翻页测试通过
 - [ ] 翻页中途取消测试通过
 - [ ] 不同屏幕尺寸适配测试通过
+- [x] getCross() 不再创建新 PointF 对象，复用预分配的 mBezierEnd1/mBezierEnd2
+- [x] 所有 GradientDrawable 阴影绘制已替换为 LinearGradient + Paint 方式
+- [x] drawCurrentPageShadow() 的 save/restore 嵌套层数减少
+- [x] drawCurrentBackArea() 中不再调用 canvas.drawColor()
+- [x] 动画时长在 200-400ms 范围内，对角翻页无卡顿
+- [x] 翻页动画视觉效果与优化前保持一致（阴影、背面、折叠效果完整）
+- [x] 阴影宽度等魔法数字已提取为常量
