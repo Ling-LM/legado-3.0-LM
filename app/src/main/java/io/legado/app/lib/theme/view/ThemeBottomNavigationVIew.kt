@@ -4,10 +4,12 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.view.ViewCompat
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import io.legado.app.R
 import io.legado.app.databinding.ViewNavigationBadgeBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.Selector
@@ -30,6 +32,12 @@ class ThemeBottomNavigationVIew(context: Context, attrs: AttributeSet) :
             .setSelectedColor(ThemeStore.accentColor(context)).create()
         itemIconTintList = colorStateList
         itemTextColor = colorStateList
+
+        itemIconSize = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP, 20f, resources.displayMetrics
+        ).toInt()
+        itemTextAppearanceActive = R.style.BottomNavTextStyle_Active
+        itemTextAppearanceInactive = R.style.BottomNavTextStyle_Inactive
 
         if (AppConfig.isEInkMode) {
             isItemHorizontalTranslationEnabled = false

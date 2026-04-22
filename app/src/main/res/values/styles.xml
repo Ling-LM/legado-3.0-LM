@@ -127,4 +127,14 @@
         <item name="android:layout_width">wrap_content</item>
     </style>
 
+    //*******************Bottom Navigation Style**************************//
+
+    <style name="BottomNavTextStyle_Active" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textSize">11sp</item>
+    </style>
+
+    <style name="BottomNavTextStyle_Inactive" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textSize">10sp</item>
+    </style>
+
 </resources>
