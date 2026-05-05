@@ -20,6 +20,7 @@ import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -220,6 +221,8 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
 
     override fun onDraw(canvas: Canvas) {
         if (!isRunning) return
+        canvas.save()
+        canvas.clipRect(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
         when (mDirection) {
             PageDirection.NEXT -> {
                 calcPoints()
@@ -237,8 +240,9 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 drawCurrentBackArea(canvas, prevBitmap)
             }
 
-            else -> return
+            else -> Unit
         }
+        canvas.restore()
     }
 
     private fun drawCurrentBackArea(
@@ -315,7 +319,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 )
                 canvas.drawRect(
                     left, mBezierStart1.y,
-                    right, mBezierStart1.y + mMaxLength,
+                    right, min(mBezierStart1.y + mMaxLength, viewHeight.toFloat()),
                     mFolderShadowPaint
                 )
             }
@@ -340,7 +344,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         }
 
         mPath1.reset()
-        mPath1.moveTo(x, y)
+        mPath1.moveTo(x, y.coerceAtMost(viewHeight.toFloat()))
         mPath1.lineTo(mTouchX, mTouchY)
         mPath1.lineTo(mBezierControl1.x, mBezierControl1.y)
         mPath1.lineTo(mBezierStart1.x, mBezierStart1.y)
@@ -378,7 +382,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                     Shader.TileMode.CLAMP
                 )
                 canvas.drawRect(
-                    leftX, mBezierControl1.y - mMaxLength,
+                    leftX, max(mBezierControl1.y - mMaxLength, 0f),
                     rightX, mBezierControl1.y,
                     mFrontShadowPaint
                 )
@@ -388,7 +392,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         }
 
         mPath1.reset()
-        mPath1.moveTo(x, y)
+        mPath1.moveTo(x, y.coerceAtMost(viewHeight.toFloat()))
         mPath1.lineTo(mTouchX, mTouchY)
         mPath1.lineTo(mBezierControl2.x, mBezierControl2.y)
         mPath1.lineTo(mBezierStart2.x, mBezierStart2.y)
@@ -515,7 +519,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 )
                 canvas.drawRect(
                     leftX, mBezierStart1.y,
-                    rightX, mMaxLength + mBezierStart1.y,
+                    rightX, min(mMaxLength + mBezierStart1.y, viewHeight.toFloat()),
                     mBackShadowPaint
                 )
             }
