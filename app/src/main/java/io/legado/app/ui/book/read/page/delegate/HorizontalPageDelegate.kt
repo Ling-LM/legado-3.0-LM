@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.read.page.delegate
 
 import android.view.MotionEvent
+import android.view.View
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
@@ -46,6 +47,7 @@ abstract class HorizontalPageDelegate(readView: ReadView) : PageDelegate(readVie
     override fun onTouch(event: MotionEvent) {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
+                readView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
                 abortAnim()
             }
 
@@ -123,6 +125,7 @@ abstract class HorizontalPageDelegate(readView: ReadView) : PageDelegate(readVie
         } else {
             readView.isAbortAnim = false
         }
+        readView.setLayerType(View.LAYER_TYPE_NONE, null)
     }
 
     override fun nextPageByAnim(animationSpeed: Int) {
@@ -147,6 +150,7 @@ abstract class HorizontalPageDelegate(readView: ReadView) : PageDelegate(readVie
 
     override fun onDestroy() {
         super.onDestroy()
+        readView.setLayerType(View.LAYER_TYPE_NONE, null)
         prevRecorder.recycle()
         curRecorder.recycle()
         nextRecorder.recycle()

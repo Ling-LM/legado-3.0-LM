@@ -307,8 +307,6 @@ class ReadView(context: Context, attrs: AttributeSet) :
             invalidate()
         }
         pageDelegate?.onScroll()
-        val offset = touchY - lastY
-        touchY -= offset - offset.toInt()
     }
 
     /**

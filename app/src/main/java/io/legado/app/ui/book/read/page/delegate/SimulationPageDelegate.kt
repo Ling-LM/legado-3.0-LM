@@ -4,37 +4,31 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
-import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
 import android.graphics.Region
-import android.graphics.Shader
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.MotionEvent
+import android.view.View
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.utils.screenshot
 import kotlin.math.abs
 import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.hypot
-import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sin
 
 @Suppress("DEPRECATION")
 class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readView) {
 
     companion object {
-        private const val SHADOW_WIDTH = 25f
-        private const val SQRT2 = 1.414f
-        private const val SHADOW_DIAGONAL = SHADOW_WIDTH * SQRT2
     }
 
-    private var mTouchX = 0.1f
-    private var mTouchY = 0.1f
+    private var mTouchX = 0.01f
+    private var mTouchY = 0.01f
 
     private var mCornerX = 1
     private var mCornerY = 1
@@ -71,15 +65,15 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
     private var mIsRtOrLb = false
     private var mMaxLength = hypot(viewWidth.toDouble(), viewHeight.toDouble()).toFloat()
 
-    private val mFolderShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
-    private val mBackShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
-    private val mFrontShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
+    private val mBackShadowDrawableRL = GradientDrawable(
+        GradientDrawable.Orientation.RIGHT_LEFT,
+        intArrayOf(0xff111111.toInt(), 0x111111)
+    ).apply { gradientType = GradientDrawable.LINEAR_GRADIENT }
+
+    private val mBackShadowDrawableLR = GradientDrawable(
+        GradientDrawable.Orientation.LEFT_RIGHT,
+        intArrayOf(0xff111111.toInt(), 0x111111)
+    ).apply { gradientType = GradientDrawable.LINEAR_GRADIENT }
 
     private val mPaint: Paint = Paint().apply { style = Paint.Style.FILL }
 
@@ -87,27 +81,6 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
     private var prevBitmap: Bitmap? = null
     private var nextBitmap: Bitmap? = null
     private var canvas: Canvas = Canvas()
-
-    init {
-        mFolderShadowPaint.shader = LinearGradient(
-            0f, 0f, 1f, 0f,
-            intArrayOf(0x333333, -0x4fcccccd),
-            null,
-            Shader.TileMode.CLAMP
-        )
-        mBackShadowPaint.shader = LinearGradient(
-            0f, 0f, 1f, 0f,
-            intArrayOf(-0xeeeeef, 0x111111),
-            null,
-            Shader.TileMode.CLAMP
-        )
-        mFrontShadowPaint.shader = LinearGradient(
-            0f, 0f, 1f, 0f,
-            intArrayOf(-0x7feeeeef, 0x111111),
-            null,
-            Shader.TileMode.CLAMP
-        )
-    }
 
     override fun setBitmap() {
         when (mDirection) {
@@ -138,13 +111,13 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             }
 
             MotionEvent.ACTION_MOVE -> {
-                if ((startY > viewHeight / 3 && startY < viewHeight * 2 / 3)
+                if ((startY > viewHeight / 3f && startY < viewHeight * 2f / 3f)
                     || mDirection == PageDirection.PREV
                 ) {
                     readView.touchY = viewHeight.toFloat()
                 }
 
-                if (startY > viewHeight / 3 && startY < viewHeight / 2
+                if (startY > viewHeight / 3f && startY < viewHeight / 2f
                     && mDirection == PageDirection.NEXT
                 ) {
                     readView.touchY = 1f
@@ -173,40 +146,38 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
     }
 
     override fun onAnimStart(animationSpeed: Int) {
-        var dx: Float
-        val dy: Float
+        var dx: Int
+        var dy: Int
         if (isCancel) {
             dx = if (mCornerX > 0 && mDirection == PageDirection.NEXT) {
-                (viewWidth - touchX)
+                (viewWidth - touchX).toInt()
             } else {
-                -touchX
+                -touchX.toInt()
             }
             if (mDirection != PageDirection.NEXT) {
-                dx = -(viewWidth + touchX)
+                dx = -(viewWidth + touchX.toInt())
             }
             dy = if (mCornerY > 0) {
-                (viewHeight - touchY)
+                (viewHeight - touchY).toInt()
             } else {
-                -touchY
+                -touchY.toInt()
             }
         } else {
             dx = if (mCornerX > 0 && mDirection == PageDirection.NEXT) {
-                -(viewWidth + touchX)
+                -(viewWidth + touchX.toInt())
             } else {
-                viewWidth - touchX
+                (viewWidth - touchX + viewWidth).toInt()
             }
             dy = if (mCornerY > 0) {
-                (viewHeight - touchY)
+                (viewHeight - touchY).toInt()
             } else {
-                (1 - touchY)
+                (1 - touchY).toInt()
             }
         }
-        val distance = hypot(dx.toDouble(), dy.toDouble()).toFloat()
-        val duration = (animationSpeed * distance / mMaxLength).coerceIn(200f, 400f).toLong()
         scroller.startScroll(
             touchX.toInt(), touchY.toInt(),
-            dx.toInt(), dy.toInt(),
-            duration.toInt()
+            dx, dy,
+            animationSpeed
         )
         isRunning = true
         isStarted = true
@@ -214,6 +185,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
     }
 
     override fun onAnimStop() {
+        readView.setLayerType(View.LAYER_TYPE_NONE, null)
         if (!isCancel) {
             readView.fillPage(mDirection)
         }
@@ -228,7 +200,6 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 calcPoints()
                 drawCurrentPageArea(canvas, curBitmap)
                 drawNextPageAreaAndShadow(canvas, nextBitmap)
-                drawCurrentPageShadow(canvas)
                 drawCurrentBackArea(canvas, curBitmap)
             }
 
@@ -236,7 +207,6 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 calcPoints()
                 drawCurrentPageArea(canvas, prevBitmap)
                 drawNextPageAreaAndShadow(canvas, curBitmap)
-                drawCurrentPageShadow(canvas)
                 drawCurrentBackArea(canvas, prevBitmap)
             }
 
@@ -250,11 +220,6 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         bitmap: Bitmap?
     ) {
         bitmap ?: return
-        val i = ((mBezierStart1.x + mBezierControl1.x) / 2).toInt()
-        val f1 = abs(i - mBezierControl1.x)
-        val i1 = ((mBezierStart2.y + mBezierControl2.y) / 2).toInt()
-        val f2 = abs(i1 - mBezierControl2.y)
-        val f3 = min(f1, f2)
         mPath1.reset()
         mPath1.moveTo(mBezierVertex2.x, mBezierVertex2.y)
         mPath1.lineTo(mBezierVertex1.x, mBezierVertex1.y)
@@ -289,173 +254,6 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             mMatrix.postTranslate(mBezierControl1.x, mBezierControl1.y)
             canvas.drawBitmap(bitmap, mMatrix, mPaint)
             mPaint.colorFilter = null
-
-            canvas.rotate(mDegrees, mBezierStart1.x, mBezierStart1.y)
-            val left: Float
-            val right: Float
-            if (mIsRtOrLb) {
-                left = mBezierStart1.x - 1
-                right = mBezierStart1.x + f3 + 1
-            } else {
-                left = mBezierStart1.x - f3 - 1
-                right = mBezierStart1.x + 1
-            }
-            val shaderWidth = right - left
-            if (shaderWidth > 0) {
-                val gradientX0: Float
-                val gradientX1: Float
-                if (mIsRtOrLb) {
-                    gradientX0 = left
-                    gradientX1 = right
-                } else {
-                    gradientX0 = right
-                    gradientX1 = left
-                }
-                mFolderShadowPaint.shader = LinearGradient(
-                    gradientX0, 0f, gradientX1, 0f,
-                    intArrayOf(0x333333, -0x4fcccccd),
-                    null,
-                    Shader.TileMode.CLAMP
-                )
-                canvas.drawRect(
-                    left, mBezierStart1.y,
-                    right, min(mBezierStart1.y + mMaxLength, viewHeight.toFloat()),
-                    mFolderShadowPaint
-                )
-            }
-        } finally {
-            canvas.restore()
-        }
-    }
-
-    private fun drawCurrentPageShadow(canvas: Canvas) {
-        val degree: Double = if (mIsRtOrLb) {
-            Math.PI / 4 - atan2(mBezierControl1.y - mTouchY, mTouchX - mBezierControl1.x)
-        } else {
-            Math.PI / 4 - atan2(mTouchY - mBezierControl1.y, mTouchX - mBezierControl1.x)
-        }
-        val d1 = SHADOW_DIAGONAL * cos(degree)
-        val d2 = SHADOW_DIAGONAL * sin(degree)
-        val x = (mTouchX + d1).toFloat()
-        val y: Float = if (mIsRtOrLb) {
-            (mTouchY + d2).toFloat()
-        } else {
-            (mTouchY - d2).toFloat()
-        }
-
-        mPath1.reset()
-        mPath1.moveTo(x, y.coerceAtMost(viewHeight.toFloat()))
-        mPath1.lineTo(mTouchX, mTouchY)
-        mPath1.lineTo(mBezierControl1.x, mBezierControl1.y)
-        mPath1.lineTo(mBezierStart1.x, mBezierStart1.y)
-        mPath1.close()
-
-        canvas.save()
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                canvas.clipOutPath(mPath0)
-            } else {
-                canvas.clipPath(mPath0, Region.Op.XOR)
-            }
-            canvas.clipPath(mPath1, Region.Op.INTERSECT)
-
-            var leftX: Float
-            var rightX: Float
-            if (mIsRtOrLb) {
-                leftX = mBezierControl1.x
-                rightX = mBezierControl1.x + SHADOW_WIDTH
-            } else {
-                leftX = mBezierControl1.x - SHADOW_WIDTH
-                rightX = mBezierControl1.x + 1
-            }
-            val rotateDegrees = Math.toDegrees(
-                atan2(mTouchX - mBezierControl1.x, mBezierControl1.y - mTouchY).toDouble()
-            ).toFloat()
-            canvas.rotate(rotateDegrees, mBezierControl1.x, mBezierControl1.y)
-
-            val shaderWidth = rightX - leftX
-            if (shaderWidth > 0) {
-                mFrontShadowPaint.shader = LinearGradient(
-                    leftX, 0f, rightX, 0f,
-                    intArrayOf(-0x7feeeeef, 0x111111),
-                    null,
-                    Shader.TileMode.CLAMP
-                )
-                canvas.drawRect(
-                    leftX, max(mBezierControl1.y - mMaxLength, 0f),
-                    rightX, mBezierControl1.y,
-                    mFrontShadowPaint
-                )
-            }
-        } finally {
-            canvas.restore()
-        }
-
-        mPath1.reset()
-        mPath1.moveTo(x, y.coerceAtMost(viewHeight.toFloat()))
-        mPath1.lineTo(mTouchX, mTouchY)
-        mPath1.lineTo(mBezierControl2.x, mBezierControl2.y)
-        mPath1.lineTo(mBezierStart2.x, mBezierStart2.y)
-        mPath1.close()
-
-        canvas.save()
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                canvas.clipOutPath(mPath0)
-            } else {
-                canvas.clipPath(mPath0, Region.Op.XOR)
-            }
-            canvas.clipPath(mPath1)
-
-            var leftX: Float
-            var rightX: Float
-            if (mIsRtOrLb) {
-                leftX = mBezierControl2.y
-                rightX = mBezierControl2.y + SHADOW_WIDTH
-            } else {
-                leftX = mBezierControl2.y - SHADOW_WIDTH
-                rightX = mBezierControl2.y + 1
-            }
-            val rotateDegrees = Math.toDegrees(
-                atan2(mBezierControl2.y - mTouchY, mBezierControl2.x - mTouchX).toDouble()
-            ).toFloat()
-            canvas.rotate(rotateDegrees, mBezierControl2.x, mBezierControl2.y)
-            val temp =
-                if (mBezierControl2.y < 0) (mBezierControl2.y - viewHeight).toDouble()
-                else mBezierControl2.y.toDouble()
-            val hmg = hypot(mBezierControl2.x.toDouble(), temp)
-            val leftBound: Float
-            val rightBound: Float
-            if (hmg > mMaxLength) {
-                leftBound = mBezierControl2.x - SHADOW_WIDTH - hmg.toFloat()
-                rightBound = mBezierControl2.x + mMaxLength - hmg.toFloat()
-            } else {
-                leftBound = mBezierControl2.x - mMaxLength
-                rightBound = mBezierControl2.x
-            }
-            val shaderHeight = rightX - leftX
-            if (shaderHeight > 0) {
-                val gradientY0: Float
-                val gradientY1: Float
-                if (mIsRtOrLb) {
-                    gradientY0 = leftX
-                    gradientY1 = rightX
-                } else {
-                    gradientY0 = rightX
-                    gradientY1 = leftX
-                }
-                mFrontShadowPaint.shader = LinearGradient(
-                    0f, gradientY0, 0f, gradientY1,
-                    intArrayOf(-0x7feeeeef, 0x111111),
-                    null,
-                    Shader.TileMode.CLAMP
-                )
-                canvas.drawRect(
-                    leftBound, leftX,
-                    rightBound, rightX,
-                    mFrontShadowPaint
-                )
-            }
         } finally {
             canvas.restore()
         }
@@ -480,6 +278,19 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             )
         ).toFloat()
 
+        val leftx: Int
+        val rightx: Int
+        val mBackShadowDrawable: GradientDrawable
+        if (mIsRtOrLb) {
+            leftx = mBezierStart1.x.toInt()
+            rightx = (mBezierStart1.x + mTouchToCornerDis / 4).toInt()
+            mBackShadowDrawable = mBackShadowDrawableLR
+        } else {
+            leftx = (mBezierStart1.x - mTouchToCornerDis / 4).toInt()
+            rightx = mBezierStart1.x.toInt()
+            mBackShadowDrawable = mBackShadowDrawableRL
+        }
+
         canvas.save()
         try {
             canvas.clipPath(mPath0)
@@ -488,44 +299,17 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             } else {
                 canvas.clipPath(mPath1, Region.Op.INTERSECT)
             }
-            canvas.drawBitmap(bitmap, 0f, 0f, null)
-
-            canvas.rotate(mDegrees, mBezierStart1.x, mBezierStart1.y)
-            val leftX: Float
-            val rightX: Float
-            if (mIsRtOrLb) {
-                leftX = mBezierStart1.x
-                rightX = mBezierStart1.x + mTouchToCornerDis / 4
-            } else {
-                leftX = mBezierStart1.x - mTouchToCornerDis / 4
-                rightX = mBezierStart1.x
-            }
-            val shaderWidth = rightX - leftX
-            if (shaderWidth > 0) {
-                val gradientX0: Float
-                val gradientX1: Float
-                if (mIsRtOrLb) {
-                    gradientX0 = leftX
-                    gradientX1 = rightX
-                } else {
-                    gradientX0 = rightX
-                    gradientX1 = leftX
-                }
-                mBackShadowPaint.shader = LinearGradient(
-                    gradientX0, 0f, gradientX1, 0f,
-                    intArrayOf(-0xeeeeef, 0x111111),
-                    null,
-                    Shader.TileMode.CLAMP
-                )
-                canvas.drawRect(
-                    leftX, mBezierStart1.y,
-                    rightX, min(mMaxLength + mBezierStart1.y, viewHeight.toFloat()),
-                    mBackShadowPaint
-                )
-            }
-        } finally {
-            canvas.restore()
+        } catch (_: Exception) {
         }
+
+        canvas.drawBitmap(bitmap, 0f, 0f, null)
+        canvas.rotate(mDegrees, mBezierStart1.x, mBezierStart1.y)
+        mBackShadowDrawable.setBounds(
+            leftx, mBezierStart1.y.toInt(),
+            rightx, (mMaxLength + mBezierStart1.y).toInt()
+        )
+        mBackShadowDrawable.draw(canvas)
+        canvas.restore()
     }
 
     private fun drawCurrentPageArea(
@@ -556,10 +340,10 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
     }
 
     private fun calcCornerXY(x: Float, y: Float) {
-        mCornerX = if (x <= viewWidth / 2) 0 else viewWidth
-        mCornerY = if (y <= viewHeight / 2) 0 else viewHeight
+        mCornerX = if (x <= viewWidth / 2f) 0 else viewWidth
+        mCornerY = if (y <= viewHeight / 2f) 0 else viewHeight
         mIsRtOrLb = (mCornerX == 0 && mCornerY == viewHeight)
-                || (mCornerY == 0 && mCornerX == viewWidth)
+                || (mCornerX == viewWidth && mCornerY == 0)
     }
 
     private fun calcPoints() {
@@ -609,7 +393,6 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 mBezierControl1.y = cornerYf
 
                 mBezierControl2.x = cornerXf
-
                 if (recalcCornerYMinusMiddleY == 0f) {
                     mBezierControl2.y =
                         mMiddleY - recalcCornerXMinusMiddleX * recalcCornerXMinusMiddleX / 0.1f
